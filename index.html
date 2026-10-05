@@ -168,7 +168,7 @@
     <div class="sidebar-logo">🎬 Kinou<span>Récupération de films</span></div>
     <div id="nav-items"></div>
     <div style="margin-top:auto;padding:12px 8px;border-top:1px solid var(--border);display:flex;gap:6px;">
-      <button class="btn btn-ghost btn-sm" style="flex:1;font-size:11px;" onclick="pushDataToGithub()">↑ Sync GitHub</button>
+      <button id="gh-sync-btn" class="btn btn-ghost btn-sm" style="flex:1;font-size:11px;" onclick="pushDataToGithub()">↑ Sync GitHub</button>
       <button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="showGithubSettings()" title="Paramètres GitHub">⚙️</button>
     </div>
   </nav>
@@ -298,33 +298,83 @@ const GH_TOKEN_KEY = 'kinou_gh_token';
 
 function getGhToken() { return localStorage.getItem(GH_TOKEN_KEY) || ''; }
 
-async function pushDataToGithub() {
+// Encode UTF-8 → base64 sans corrompre les accents (même méthode que Labyrinthe)
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+
+// SHA courant en mémoire — mis à jour après chaque push réussi
+let _ghSha = null;
+
+async function ghGet(token) {
+  const r = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+    cache: 'no-store',
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!r.ok) throw new Error(`GitHub ${r.status}`);
+  const j = await r.json();
+  return j.sha;
+}
+
+let _saveTimeout = null;
+let _unsaved = false;
+
+function markUnsaved() {
+  _unsaved = true;
+  const btn = document.getElementById('gh-sync-btn');
+  if (btn) btn.textContent = '↑ Sync GitHub *';
+}
+
+function markSaved() {
+  _unsaved = false;
+  const btn = document.getElementById('gh-sync-btn');
+  if (btn) btn.textContent = '↑ Sync GitHub';
+}
+
+// Auto-save avec debounce 2s
+function scheduleAutoSave() {
+  if (!getGhToken()) return;
+  markUnsaved();
+  clearTimeout(_saveTimeout);
+  _saveTimeout = setTimeout(() => pushDataToGithub(true), 2000);
+}
+
+async function pushDataToGithub(silent = false) {
   const token = getGhToken();
-  if (!token) { alert('Aucun token GitHub configuré. Va dans Paramètres (⚙️) pour en ajouter un.'); return; }
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
-  // get current sha
-  const headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' };
-  const getRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
-    headers: { ...headers, 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-    cache: 'no-store'
-  });
-  if (!getRes.ok) {
-    const err = await getRes.json().catch(()=>({}));
-    alert(`Erreur lecture GitHub (${getRes.status}) : ${err.message||'inconnu'}`);
-    return;
-  }
-  const fileInfo = await getRes.json();
-  const currentSha = fileInfo.sha;
-  const putRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
-    method: 'PUT', headers,
-    body: JSON.stringify({ message: 'Mise à jour données K-Recup', content, sha: currentSha })
-  });
-  if (putRes.ok) { showToast('✅ Données synchronisées sur GitHub !'); }
-  else {
-    const err2 = await putRes.json().catch(()=>({}));
-    alert(`Erreur push GitHub (${putRes.status}) : ${err2.message||'inconnu'}`);
+  if (!token) { alert('Aucun token GitHub configuré. Clique ⚙️ pour en ajouter un.'); return; }
+  const content = utf8ToBase64(JSON.stringify(DATA, null, 2));
+  try {
+    // Toujours lire le SHA frais pour éviter les conflits 409
+    const freshSha = await ghGet(token);
+    _ghSha = freshSha;
+    const putRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Mise à jour K-Recup', content, sha: _ghSha })
+    });
+    if (!putRes.ok) {
+      const err = await putRes.json().catch(()=>({}));
+      throw new Error(err.message || `${putRes.status}`);
+    }
+    // Mettre à jour le SHA avec celui retourné par le PUT
+    const putData = await putRes.json();
+    _ghSha = putData.content.sha;
+    markSaved();
+    if (!silent) showToast('✅ Données synchronisées sur GitHub !');
+    else showToast('💾 Sauvegarde auto OK');
+  } catch(e) {
+    if (!silent) alert(`Erreur GitHub : ${e.message}`);
+    else showToast(`⚠️ Sauvegarde auto échouée : ${e.message}`);
   }
 }
+
+// Alerte si on quitte sans sauvegarder
+window.addEventListener('beforeunload', e => {
+  if (_unsaved) { e.preventDefault(); e.returnValue = ''; }
+});
 
 function showGithubSettings() {
   const existing = document.getElementById('gh-settings-modal');
@@ -1016,6 +1066,7 @@ function saveModal() {
   buildSidebar();
   applyFilters();
   showNotif('✅ Projet mis à jour');
+  scheduleAutoSave();
 }
 
 function closeModal() { document.getElementById('modal').style.display='none'; editingProjet=null; }
