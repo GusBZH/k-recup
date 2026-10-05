@@ -160,10 +160,96 @@
     .chef-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(92,107,192,0.2); color: var(--accent2); font-weight: 500; white-space: nowrap; }
     .notif { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--green); color: var(--text); padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 200; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* ===================== RESPONSIVE MOBILE ===================== */
+    #sidebar-toggle {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 9px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      #sidebar-toggle { display: flex; align-items: center; justify-content: center; }
+
+      #app { position: relative; }
+
+      #sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        z-index: 500;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+      }
+      #sidebar.open { transform: translateX(0); }
+
+      #sidebar-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 499;
+      }
+      #sidebar-backdrop.open { display: block; }
+
+      #main { width: 100%; }
+
+      #topbar { padding: 10px 12px; gap: 8px; }
+      #topbar h1 { font-size: 14px; }
+      .search-box { width: 100%; font-size: 13px; }
+
+      #filters { padding: 8px 12px; gap: 6px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+      #filters::-webkit-scrollbar { display: none; }
+      .filter-btn { white-space: nowrap; flex-shrink: 0; }
+      .filter-sep { flex-shrink: 0; }
+      .filter-label { display: none; }
+
+      #statsbar { padding: 6px 12px; gap: 10px; }
+
+      /* Table mobile : masquer colonnes secondaires */
+      table thead th:nth-child(3),
+      table thead th:nth-child(4),
+      table thead th:nth-child(7) { display: none; }
+      table tbody td:nth-child(3),
+      table tbody td:nth-child(4),
+      table tbody td:nth-child(7) { display: none; }
+      tbody td { padding: 8px 10px; font-size: 12px; }
+      thead th { padding: 8px 10px; font-size: 10px; }
+
+      /* Modal plein écran sur mobile */
+      .modal-overlay { padding: 0; align-items: flex-end; }
+      .modal { border-radius: 16px 16px 0 0; max-height: 95vh; }
+      .modal-header { padding: 16px 16px 12px; }
+      .modal-body { padding: 12px 16px; }
+      .modal-footer { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
+      .modal-footer .btn { flex: 1; text-align: center; }
+
+      .field-row, .field-row-3 { grid-template-columns: 1fr; gap: 8px; }
+
+      /* Relances cards */
+      .relance-card { margin: 0 12px 8px; }
+
+      /* Productions */
+      .prod-film-row { flex-wrap: wrap; gap: 4px; padding: 8px 12px 8px 20px; }
+      .prod-film-real { display: none; }
+      .prod-header { padding: 10px 12px; }
+
+      /* Notif */
+      .notif { bottom: 12px; right: 12px; left: 12px; right: 12px; text-align: center; }
+    }
   </style>
 </head>
 <body>
 <div id="app">
+  <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
   <nav id="sidebar">
     <div class="sidebar-logo">🎬 Kinou<span>Récupération de films</span></div>
     <div id="nav-items"></div>
@@ -174,6 +260,7 @@
   </nav>
   <div id="main">
     <div id="topbar">
+      <button id="sidebar-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
       <h1 id="page-title">Tous les films</h1>
       <input class="search-box" id="search" placeholder="Rechercher…" oninput="applyFilters()" />
     </div>
@@ -278,6 +365,17 @@
 </div>
 
 <script>
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const b = document.getElementById('sidebar-backdrop');
+  s.classList.toggle('open');
+  b.classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+
 let DATA = null;
 let currentView = 'table'; // 'table' | 'relances' | 'productions'
 let currentChefId = null;
@@ -291,7 +389,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-05.2';
+const APP_VERSION = '2026-10-05.3';
 
 (function checkVersion() {
   async function check() {
@@ -533,8 +631,12 @@ function cleanProjet(s) {
 // Prénom du chef op (premier mot du nom)
 function prenom(nom) { return (nom||'').split(' ')[0]; }
 
-// Emoji genre pour un chef op (cherche d'abord dans chef_op.genre, sinon dans projet.genre)
-function genreEmoji(genre) { return genre==='F'?'♀️':genre==='M'?'♂️':''; }
+// Symbole genre SVG pour un chef op (cherche d'abord dans chef_op.genre, sinon dans projet.genre)
+function genreEmoji(g) {
+  if (g==='F') return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="vertical-align:middle;display:inline-block"><circle cx="6" cy="4.5" r="3.5" stroke="#ce93d8" stroke-width="1.3" fill="none"/><line x1="6" y1="8" x2="6" y2="11.5" stroke="#ce93d8" stroke-width="1.3"/><line x1="4" y1="10" x2="8" y2="10" stroke="#ce93d8" stroke-width="1.3"/></svg>';
+  if (g==='M') return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="vertical-align:middle;display:inline-block"><circle cx="4.5" cy="7.5" r="3.5" stroke="#7986cb" stroke-width="1.3" fill="none"/><line x1="7.5" y1="4.5" x2="11.5" y2="0.5" stroke="#7986cb" stroke-width="1.3"/><line x1="8.5" y1="0.5" x2="11.5" y2="0.5" stroke="#7986cb" stroke-width="1.3"/><line x1="11.5" y1="0.5" x2="11.5" y2="3.5" stroke="#7986cb" stroke-width="1.3"/></svg>';
+  return '';
+}
 
 // Récupère le genre d'un chef op (niveau chef_op en priorité)
 function getChefGenre(chefId) {
@@ -633,13 +735,13 @@ function setUrgencyFilter(u, btn) {
 function showView(v) {
   currentView = v; currentChefId = null;
   document.getElementById('filters').style.display = v==='table'?'flex':'none';
-  buildSidebar(); applyFilters();
+  buildSidebar(); applyFilters(); closeSidebar();
 }
 
 function showChef(id) {
   currentView = 'table'; currentChefId = id;
   document.getElementById('filters').style.display = 'flex';
-  buildSidebar(); applyFilters();
+  buildSidebar(); applyFilters(); closeSidebar();
 }
 
 function applyFilters() {
