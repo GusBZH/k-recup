@@ -304,7 +304,7 @@ async function pushDataToGithub() {
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
   // get current sha
   const headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' };
-  const getRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, { headers });
+  const getRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}?t=${Date.now()}`, { headers, cache: 'no-store' });
   if (!getRes.ok) {
     const err = await getRes.json().catch(()=>({}));
     alert(`Erreur lecture GitHub (${getRes.status}) : ${err.message||'inconnu'}`);
