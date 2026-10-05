@@ -224,9 +224,9 @@
       tbody td { padding: 8px 10px; font-size: 12px; }
       thead th { padding: 8px 10px; font-size: 10px; }
 
-      /* Modal mobile : 60px en haut = zone tactile pour fermer en touchant */
-      .modal-overlay { padding: 60px 0 0; align-items: flex-end; }
-      .modal { border-radius: 16px 16px 0 0; max-height: calc(100vh - 60px); }
+      /* Modal mobile : marges sur 3 côtés = zones tactiles pour fermer */
+      .modal-overlay { padding: 60px 16px 0; align-items: flex-end; }
+      .modal { border-radius: 16px 16px 0 0; max-height: calc(100vh - 60px); width: 100%; }
       .modal-header { padding: 16px 16px 12px; }
       .modal-body { padding: 12px 16px; }
       .modal-footer { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
@@ -389,7 +389,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-05.4';
+const APP_VERSION = '2026-10-05.5';
 
 (function checkVersion() {
   async function check() {
