@@ -387,11 +387,11 @@ async function pushDataToGithub(silent = false) {
     const putData = await putRes.json();
     _ghSha = putData.content.sha;
     markSaved();
-    if (!silent) showToast('✅ Données synchronisées sur GitHub !');
-    else showToast('💾 Sauvegarde auto OK');
+    if (!silent) showNotif('✅ Données synchronisées sur GitHub !');
+    else showNotif('💾 Sauvegarde auto OK');
   } catch(e) {
     if (!silent) alert(`Erreur GitHub : ${e.message}`);
-    else showToast(`⚠️ Sauvegarde auto échouée : ${e.message}`);
+    else showNotif(`⚠️ Sauvegarde auto échouée : ${e.message}`);
   }
 }
 
@@ -415,7 +415,7 @@ function showGithubSettings() {
         style="padding:10px 14px;border-radius:8px;border:1px solid #2e3250;background:#22263a;color:#e8eaf6;font-size:13px;outline:none;font-family:monospace;" />
       <div style="display:flex;gap:10px;justify-content:flex-end;">
         <button onclick="document.getElementById('gh-settings-modal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid #2e3250;background:#22263a;color:#e8eaf6;cursor:pointer;font-size:13px;">Annuler</button>
-        <button onclick="localStorage.setItem('${GH_TOKEN_KEY}',document.getElementById('gh-token-input').value);document.getElementById('gh-settings-modal').remove();showToast('Token sauvegardé ✅');" style="padding:8px 16px;border-radius:8px;border:none;background:#5c6bc0;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Sauvegarder</button>
+        <button onclick="localStorage.setItem('${GH_TOKEN_KEY}',document.getElementById('gh-token-input').value);document.getElementById('gh-settings-modal').remove();showNotif('Token sauvegardé ✅');" style="padding:8px 16px;border-radius:8px;border:none;background:#5c6bc0;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Sauvegarder</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
