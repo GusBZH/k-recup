@@ -305,14 +305,21 @@ async function pushDataToGithub() {
   // get current sha
   const headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' };
   const getRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, { headers });
-  if (!getRes.ok) { alert('Erreur GitHub : impossible de lire le fichier distant.'); return; }
+  if (!getRes.ok) {
+    const err = await getRes.json().catch(()=>({}));
+    alert(`Erreur lecture GitHub (${getRes.status}) : ${err.message||'inconnu'}`);
+    return;
+  }
   const fileInfo = await getRes.json();
   const putRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
     method: 'PUT', headers,
     body: JSON.stringify({ message: 'Mise à jour données K-Recup', content, sha: fileInfo.sha })
   });
   if (putRes.ok) { showToast('✅ Données synchronisées sur GitHub !'); }
-  else { alert('Erreur lors du push GitHub. Vérifie ton token.'); }
+  else {
+    const err2 = await putRes.json().catch(()=>({}));
+    alert(`Erreur push GitHub (${putRes.status}) : ${err2.message||'inconnu'}`);
+  }
 }
 
 function showGithubSettings() {
