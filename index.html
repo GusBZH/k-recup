@@ -167,6 +167,10 @@
   <nav id="sidebar">
     <div class="sidebar-logo">🎬 Kinou<span>Récupération de films</span></div>
     <div id="nav-items"></div>
+    <div style="margin-top:auto;padding:12px 8px;border-top:1px solid var(--border);display:flex;gap:6px;">
+      <button class="btn btn-ghost btn-sm" style="flex:1;font-size:11px;" onclick="pushDataToGithub()">↑ Sync GitHub</button>
+      <button class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="showGithubSettings()" title="Paramètres GitHub">⚙️</button>
+    </div>
   </nav>
   <div id="main">
     <div id="topbar">
@@ -285,6 +289,54 @@ let editingProjet = null;
 let currentEmailLang = 'fr';
 let currentGroupeLang = 'fr';
 let currentGroupeData = null;
+
+// ===================== GITHUB SYNC =====================
+const GH_USER = 'GusBZH';
+const GH_REPO = 'k-recup';
+const GH_FILE = 'data.json';
+const GH_TOKEN_KEY = 'kinou_gh_token';
+
+function getGhToken() { return localStorage.getItem(GH_TOKEN_KEY) || ''; }
+
+async function pushDataToGithub() {
+  const token = getGhToken();
+  if (!token) { alert('Aucun token GitHub configuré. Va dans Paramètres (⚙️) pour en ajouter un.'); return; }
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(DATA, null, 2))));
+  // get current sha
+  const headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' };
+  const getRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, { headers });
+  if (!getRes.ok) { alert('Erreur GitHub : impossible de lire le fichier distant.'); return; }
+  const fileInfo = await getRes.json();
+  const putRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+    method: 'PUT', headers,
+    body: JSON.stringify({ message: 'Mise à jour données K-Recup', content, sha: fileInfo.sha })
+  });
+  if (putRes.ok) { showToast('✅ Données synchronisées sur GitHub !'); }
+  else { alert('Erreur lors du push GitHub. Vérifie ton token.'); }
+}
+
+function showGithubSettings() {
+  const existing = document.getElementById('gh-settings-modal');
+  if (existing) existing.remove();
+  const token = getGhToken();
+  const modal = document.createElement('div');
+  modal.id = 'gh-settings-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9998;';
+  modal.innerHTML = `
+    <div style="background:#1a1d27;border:1px solid #2e3250;border-radius:12px;padding:32px 36px;min-width:360px;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:16px;font-weight:700;color:#e8eaf6;">⚙️ GitHub Token</div>
+      <div style="font-size:12px;color:#8b90b8;line-height:1.6;">Token Personal Access (classic) avec permission <code style="background:#22263a;padding:1px 5px;border-radius:4px;">repo</code>.<br>Stocké uniquement dans ton navigateur.</div>
+      <input id="gh-token-input" type="password" placeholder="ghp_xxxxxxxxxxxx" value="${token}"
+        style="padding:10px 14px;border-radius:8px;border:1px solid #2e3250;background:#22263a;color:#e8eaf6;font-size:13px;outline:none;font-family:monospace;" />
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button onclick="document.getElementById('gh-settings-modal').remove()" style="padding:8px 16px;border-radius:8px;border:1px solid #2e3250;background:#22263a;color:#e8eaf6;cursor:pointer;font-size:13px;">Annuler</button>
+        <button onclick="localStorage.setItem('${GH_TOKEN_KEY}',document.getElementById('gh-token-input').value);document.getElementById('gh-settings-modal').remove();showToast('Token sauvegardé ✅');" style="padding:8px 16px;border-radius:8px;border:none;background:#5c6bc0;color:#fff;cursor:pointer;font-size:13px;font-weight:600;">Sauvegarder</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.getElementById('gh-token-input').focus();
+}
 
 // ===================== LOAD =====================
 // ===================== AUTH =====================
