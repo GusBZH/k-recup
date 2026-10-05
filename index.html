@@ -290,6 +290,30 @@ let currentEmailLang = 'fr';
 let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
+// ===================== VERSION BANNER =====================
+const APP_VERSION = '1.0.0';
+
+(function checkVersion() {
+  async function check() {
+    try {
+      const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+      const json = await res.json();
+      if (json.version && json.version !== APP_VERSION) showVersionBanner();
+    } catch {}
+  }
+  check();
+  setInterval(check, 5 * 60 * 1000);
+})();
+
+function showVersionBanner() {
+  if (document.getElementById('version-banner')) return;
+  const b = document.createElement('div');
+  b.id = 'version-banner';
+  b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#4fa3ff;color:#111;font-size:13px;font-weight:600;padding:8px 14px;display:flex;align-items:center;justify-content:center;gap:12px;';
+  b.innerHTML = '<span>Une nouvelle version est disponible.</span><button onclick="window.location.reload()" style="background:#111;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;">Recharger</button>';
+  document.body.prepend(b);
+}
+
 // ===================== GITHUB SYNC =====================
 const GH_USER = 'GusBZH';
 const GH_REPO = 'k-recup';
