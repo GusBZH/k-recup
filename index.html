@@ -291,7 +291,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-05.1';
+const APP_VERSION = '2026-10-05.2';
 
 (function checkVersion() {
   async function check() {
@@ -334,7 +334,11 @@ function utf8ToBase64(str) {
 let _ghSha = null;
 
 async function ghGet(token) {
-  const r = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+  // `?t=Date.now()` en plus de `cache:'no-store'` : force un cache-bust côté
+  // CDN GitHub (qui peut ignorer les headers cache du navigateur) — sans ça,
+  // le SHA retourné peut être périmé et déclencher "does not match [sha]" au PUT.
+  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}?t=${Date.now()}`;
+  const r = await fetch(url, {
     cache: 'no-store',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
   });
