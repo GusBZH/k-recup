@@ -389,7 +389,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-05.6';
+const APP_VERSION = '2026-10-05.7';
 
 (function checkVersion() {
   async function check() {
@@ -435,7 +435,8 @@ async function ghGet(token) {
   // `?t=Date.now()` en plus de `cache:'no-store'` : force un cache-bust côté
   // CDN GitHub (qui peut ignorer les headers cache du navigateur) — sans ça,
   // le SHA retourné peut être périmé et déclencher "does not match [sha]" au PUT.
-  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}?t=${Date.now()}`;
+  // `?ref=gh-pages` : data.json vit sur gh-pages (branch de déploiement), pas sur main
+  const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}?ref=gh-pages&t=${Date.now()}`;
   const r = await fetch(url, {
     cache: 'no-store',
     headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
@@ -479,7 +480,7 @@ async function pushDataToGithub(silent = false) {
     const putRes = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
       method: 'PUT',
       headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Mise à jour K-Recup', content, sha: _ghSha })
+      body: JSON.stringify({ message: 'Mise à jour K-Recup', content, sha: _ghSha, branch: 'gh-pages' })
     });
     if (!putRes.ok) {
       const err = await putRes.json().catch(()=>({}));
