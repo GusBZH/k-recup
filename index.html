@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Récupération de Films – kinou.fr</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --text: #e8eaf6;
+      --text2: #8b90b8;
+      --accent: #5c6bc0;
+      --accent2: #7986cb;
+      --green: #4caf50;
+      --yellow: #ffc107;
+      --orange: #ff9800;
+      --red: #f44336;
+      --purple: #9c27b0;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+    /* LAYOUT */
+    #app { display: flex; height: 100vh; overflow: hidden; }
+    #sidebar { width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto; }
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar-logo { padding: 18px 16px 12px; font-size: 15px; font-weight: 700; color: var(--accent2); border-bottom: 1px solid var(--border); letter-spacing: 0.3px; }
+    .sidebar-logo span { color: var(--text2); font-weight: 400; font-size: 11px; display: block; margin-top: 2px; }
+    .sidebar-section { padding: 10px 12px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+    .sidebar-item { padding: 8px 16px; cursor: pointer; border-radius: 6px; margin: 2px 8px; transition: background 0.15s; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+    .sidebar-item:hover { background: var(--surface2); color: var(--text); }
+    .sidebar-item.active { background: var(--accent); color: #fff; }
+    .sidebar-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+    .chef-count { margin-left: auto; font-size: 11px; background: var(--surface2); padding: 1px 6px; border-radius: 10px; }
+    .sidebar-item.active .chef-count { background: rgba(255,255,255,0.2); }
+
+    /* TOPBAR */
+    #topbar { padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+    #topbar h1 { font-size: 16px; font-weight: 600; flex: 1; }
+    .search-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; color: var(--text); font-size: 13px; width: 240px; outline: none; }
+    .search-box:focus { border-color: var(--accent); }
+    .search-box::placeholder { color: var(--text2); }
+    .btn { padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+    /* FILTERS */
+    #filters { padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+    .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; font-size: 12px; transition: all 0.15s; }
+    .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+    .filter-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* STATS BAR */
+    #statsbar { padding: 8px 20px; display: flex; gap: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .stat { font-size: 12px; color: var(--text2); }
+    .stat strong { color: var(--text); font-size: 14px; }
+
+    /* TABLE */
+    #content { flex: 1; overflow-y: auto; padding: 0; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { background: var(--surface); padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; cursor: pointer; white-space: nowrap; user-select: none; }
+    thead th:hover { color: var(--text); }
+    thead th .sort-icon { margin-left: 4px; opacity: 0.5; }
+    thead th.sorted .sort-icon { opacity: 1; color: var(--accent2); }
+    tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 10px 14px; font-size: 13px; vertical-align: top; }
+    .td-num { color: var(--text2); font-size: 11px; }
+    .td-projet { font-weight: 500; }
+    .td-prod { color: var(--text2); font-size: 12px; }
+    .td-real { font-size: 12px; }
+    .td-notes { color: var(--text2); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* STATUS BADGE */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .badge-pas { background: rgba(139,144,184,0.15); color: var(--text2); }
+    .badge-cours { background: rgba(255,193,7,0.15); color: var(--yellow); }
+    .badge-recup { background: rgba(76,175,80,0.15); color: var(--green); }
+    .badge-impossible { background: rgba(156,39,176,0.15); color: #ce93d8; }
+
+    /* DATE COLORING */
+    .date-ok { color: var(--text2); font-size: 12px; }
+    .date-yellow { color: var(--yellow); font-size: 12px; }
+    .date-orange { color: var(--orange); font-size: 12px; }
+    .date-red { color: var(--red); font-size: 12px; font-weight: 600; }
+
+    /* ROW LEFT BORDER for urgency */
+    .row-yellow { border-left: 3px solid var(--yellow); }
+    .row-orange { border-left: 3px solid var(--orange); }
+    .row-red { border-left: 3px solid var(--red); }
+    .row-green { border-left: 3px solid var(--green); }
+    .row-purple { border-left: 3px solid var(--purple); }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+    .modal-title { font-size: 17px; font-weight: 600; }
+    .modal-sub { color: var(--text2); font-size: 13px; margin-top: 4px; }
+    .modal-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 20px; padding: 0 4px; }
+    .modal-body { padding: 20px 24px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 10px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 11px; color: var(--text2); }
+    .field input, .field select, .field textarea { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; font-family: var(--font); outline: none; resize: vertical; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+    .field select option { background: var(--surface2); }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* EMAIL TEMPLATE */
+    .email-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-family: inherit; }
+    .email-box.fr { border-left: 3px solid #1565c0; }
+    .email-box.en { border-left: 3px solid #1b5e20; }
+    .lang-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; display: inline-block; font-weight: 600; }
+    .lang-fr { background: rgba(21,101,192,0.2); color: #90caf9; }
+    .lang-en { background: rgba(27,94,32,0.2); color: #a5d6a7; }
+
+    /* RELANCES VIEW */
+    .relance-group { margin-bottom: 24px; }
+    .relance-group h2 { font-size: 13px; font-weight: 600; padding: 12px 20px 8px; position: sticky; top: 0; background: var(--bg); z-index: 5; display: flex; align-items: center; gap: 8px; }
+    .urgency-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .relance-card { margin: 0 20px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: border-color 0.15s; }
+    .relance-card:hover { border-color: var(--accent); }
+    .relance-card-info { flex: 1; min-width: 0; }
+    .relance-card-title { font-weight: 500; font-size: 13px; }
+    .relance-card-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .relance-card-chef { font-size: 11px; color: var(--accent2); margin-top: 4px; }
+    .relance-card-action { flex-shrink: 0; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty p { font-size: 14px; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* CHEF OP BADGE */
+    .chef-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: rgba(92,107,192,0.2); color: var(--accent2); font-weight: 500; white-space: nowrap; }
+
+    /* NOTIFICATION */
+    .notif { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--green); color: var(--text); padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 200; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      #sidebar { width: 180px; }
+      .search-box { width: 160px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      🎬 kinou.fr
+      <span>Récupération de films</span>
+    </div>
+    <div id="nav-chef-ops"></div>
+  </nav>
+  <div id="main">
+    <div id="topbar">
+      <h1 id="page-title">Tous les films</h1>
+      <input class="search-box" id="search" placeholder="Rechercher projet, prod, réal…" oninput="applyFilters()" />
+      <button class="btn btn-ghost" onclick="showView('relances')">📅 Relances du jour</button>
+    </div>
+    <div id="filters">
+      <span class="filter-label">Statut :</span>
+      <button class="filter-btn active" onclick="setStatusFilter(null, this)">Tous</button>
+      <button class="filter-btn" onclick="setStatusFilter('Pas commencé', this)">Pas commencé</button>
+      <button class="filter-btn" onclick="setStatusFilter('En cours', this)">En cours</button>
+      <button class="filter-btn" onclick="setStatusFilter('Récupéré', this)">Récupéré</button>
+      <button class="filter-btn" onclick="setStatusFilter('Impossible !', this)">Impossible !</button>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Urgence :</span>
+      <button class="filter-btn" onclick="setUrgencyFilter('red', this)">🔴 +90j</button>
+      <button class="filter-btn" onclick="setUrgencyFilter('orange', this)">🟠 +30j</button>
+      <button class="filter-btn" onclick="setUrgencyFilter('yellow', this)">🟡 -30j</button>
+    </div>
+    <div id="statsbar"></div>
+    <div id="content"></div>
+  </div>
+</div>
+
+<!-- MODAL PROJET -->
+<div id="modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Projet</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <h3>Informations</h3>
+        <div class="field-row">
+          <div class="field"><label>Projet</label><input id="f-projet" type="text" /></div>
+          <div class="field"><label>Production</label><input id="f-production" type="text" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Réalisateur</label><input id="f-real" type="text" /></div>
+          <div class="field"><label>Statut</label>
+            <select id="f-statut">
+              <option>Pas commencé</option>
+              <option>En cours</option>
+              <option>Récupéré</option>
+              <option>Impossible !</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Dernier contact</label><input id="f-contact" type="date" /></div>
+          <div class="field"><label>Date de sortie prévue</label><input id="f-sortie" type="date" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Email contact</label><input id="f-email" type="email" /></div>
+          <div class="field"></div>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="f-notes" rows="3"></textarea></div>
+      </div>
+
+      <div class="modal-section" id="email-section">
+        <h3>Modèle d'email</h3>
+        <div id="email-content"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="copyEmail()">📋 Copier l'email</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveModal()">💾 Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== DATA =====================
+let DATA = null;
+let currentChefId = null; // null = tous
+let currentView = 'table'; // 'table' | 'relances'
+let statusFilter = null;
+let urgencyFilter = null;
+let sortCol = 'urgency';
+let sortDir = 1;
+let editingProjet = null; // { chefId, projet }
+
+// ===================== LOAD =====================
+fetch('data.json')
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    buildSidebar();
+    applyFilters();
+  })
+  .catch(e => {
+    document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><p>Impossible de charger data.json</p></div>';
+  });
+
+// ===================== SIDEBAR =====================
+function buildSidebar() {
+  const nav = document.getElementById('nav-chef-ops');
+  let html = `
+    <div class="sidebar-section">Vues</div>
+    <div class="sidebar-item ${!currentChefId && currentView==='table' ? 'active' : ''}" onclick="selectChef(null)">
+      <span>🗂️</span> Tous les films
+      <span class="chef-count">${getTotalProjects()}</span>
+    </div>
+    <div class="sidebar-item ${currentView==='relances' ? 'active' : ''}" onclick="showView('relances')">
+      <span>📅</span> Relances du jour
+      <span class="chef-count">${getRelancesCount()}</span>
+    </div>
+    <hr class="sidebar-divider">
+    <div class="sidebar-section">Chef ops</div>`;
+
+  for (const co of DATA.chef_ops) {
+    const active = currentChefId === co.id && currentView === 'table';
+    const count = co.projets.filter(p => p.statut !== 'Récupéré' && p.statut !== 'Impossible !').length;
+    html += `<div class="sidebar-item ${active ? 'active' : ''}" onclick="selectChef('${co.id}')">
+      <span class="dot" style="background:${getChefColor(co.id)}"></span>
+      ${co.nom.split(' ')[0]}
+      <span class="chef-count">${count}</span>
+    </div>`;
+  }
+  nav.innerHTML = html;
+}
+
+function getChefColor(id) {
+  const colors = ['#5c6bc0','#26a69a','#ef5350','#ffa726','#ab47bc','#29b6f6','#66bb6a','#ec407a','#8d6e63','#78909c'];
+  const idx = DATA.chef_ops.findIndex(c => c.id === id);
+  return colors[idx % colors.length];
+}
+
+function getTotalProjects() {
+  return DATA.chef_ops.reduce((s, co) => s + co.projets.length, 0);
+}
+
+function getRelancesCount() {
+  return getAllRelances().filter(p => p._urgency !== 'ok' && p.statut !== 'Récupéré' && p.statut !== 'Impossible !').length;
+}
+
+// ===================== ROUTING =====================
+function selectChef(id) {
+  currentChefId = id;
+  currentView = 'table';
+  urgencyFilter = null;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active'); // "Tous"
+  buildSidebar();
+  applyFilters();
+}
+
+function showView(v) {
+  currentView = v;
+  currentChefId = null;
+  buildSidebar();
+  if (v === 'relances') renderRelances();
+  document.getElementById('filters').style.display = v === 'table' ? 'flex' : 'none';
+}
+
+// ===================== FILTERS =====================
+function setStatusFilter(s, btn) {
+  statusFilter = s;
+  document.querySelectorAll('#filters .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function setUrgencyFilter(u, btn) {
+  if (urgencyFilter === u) {
+    urgencyFilter = null;
+    btn.classList.remove('active');
+  } else {
+    urgencyFilter = u;
+    document.querySelectorAll('#filters .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  applyFilters();
+}
+
+// ===================== DATA HELPERS =====================
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return Math.floor((now - d) / 86400000);
+}
+
+function urgencyLevel(p) {
+  if (p.statut === 'Récupéré') return 'recup';
+  if (p.statut === 'Impossible !') return 'impossible';
+  const days = daysSince(p.dernier_contact);
+  if (days === null) return 'red'; // jamais contacté = urgent
+  if (days >= 90) return 'red';
+  if (days >= 30) return 'orange';
+  return 'yellow';
+}
+
+function getAllRelances() {
+  const all = [];
+  for (const co of DATA.chef_ops) {
+    for (const p of co.projets) {
+      all.push({ ...p, _chefId: co.id, _chefNom: co.nom, _urgency: urgencyLevel(p) });
+    }
+  }
+  return all;
+}
+
+function getFilteredProjects() {
+  let projects = [];
+  const chefs = currentChefId ? DATA.chef_ops.filter(c => c.id === currentChefId) : DATA.chef_ops;
+  for (const co of chefs) {
+    for (const p of co.projets) {
+      projects.push({ ...p, _chefId: co.id, _chefNom: co.nom, _urgency: urgencyLevel(p) });
+    }
+  }
+
+  const q = document.getElementById('search')?.value?.toLowerCase() || '';
+  if (q) {
+    projects = projects.filter(p =>
+      p.projet.toLowerCase().includes(q) ||
+      p.production.toLowerCase().includes(q) ||
+      p.real.toLowerCase().includes(q) ||
+      p.notes.toLowerCase().includes(q)
+    );
+  }
+  if (statusFilter) projects = projects.filter(p => p.statut === statusFilter);
+  if (urgencyFilter) projects = projects.filter(p => p._urgency === urgencyFilter);
+
+  // Sort
+  projects.sort((a, b) => {
+    let va, vb;
+    const urgOrder = { red: 0, orange: 1, yellow: 2, recup: 3, impossible: 4 };
+    if (sortCol === 'urgency') { va = urgOrder[a._urgency] ?? 5; vb = urgOrder[b._urgency] ?? 5; }
+    else if (sortCol === 'projet') { va = a.projet; vb = b.projet; }
+    else if (sortCol === 'production') { va = a.production; vb = b.production; }
+    else if (sortCol === 'real') { va = a.real; vb = b.real; }
+    else if (sortCol === 'statut') { va = a.statut; vb = b.statut; }
+    else if (sortCol === 'dernier_contact') { va = a.dernier_contact || ''; vb = b.dernier_contact || ''; }
+    else if (sortCol === 'chef') { va = a._chefNom; vb = b._chefNom; }
+    if (va < vb) return -sortDir;
+    if (va > vb) return sortDir;
+    return 0;
+  });
+
+  return projects;
+}
+
+// ===================== RENDER TABLE =====================
+function applyFilters() {
+  if (currentView === 'relances') { renderRelances(); return; }
+  currentView = 'table';
+  document.getElementById('filters').style.display = 'flex';
+
+  const projects = getFilteredProjects();
+  updateStats(projects);
+  document.getElementById('page-title').textContent = currentChefId
+    ? DATA.chef_ops.find(c => c.id === currentChefId)?.nom || 'Films'
+    : 'Tous les films';
+
+  if (!projects.length) {
+    document.getElementById('content').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Aucun projet trouvé</p></div>';
+    return;
+  }
+
+  const showChef = !currentChefId;
+  let html = `<table>
+    <thead><tr>
+      <th onclick="sortBy('urgency')" class="${sortCol==='urgency'?'sorted':''}">⬆ <span class="sort-icon">↕</span></th>
+      <th onclick="sortBy('projet')" class="${sortCol==='projet'?'sorted':''}">Projet <span class="sort-icon">↕</span></th>
+      <th onclick="sortBy('production')" class="${sortCol==='production'?'sorted':''}">Production <span class="sort-icon">↕</span></th>
+      <th onclick="sortBy('real')" class="${sortCol==='real'?'sorted':''}">Réal <span class="sort-icon">↕</span></th>
+      ${showChef ? '<th onclick="sortBy(\'chef\')" class="'+( sortCol==='chef'?'sorted':'')+'"">Chef op <span class="sort-icon">↕</span></th>' : ''}
+      <th onclick="sortBy('statut')" class="${sortCol==='statut'?'sorted':''}">Statut <span class="sort-icon">↕</span></th>
+      <th onclick="sortBy('dernier_contact')" class="${sortCol==='dernier_contact'?'sorted':''}">Dernier contact <span class="sort-icon">↕</span></th>
+      <th>Notes</th>
+    </tr></thead>
+    <tbody>`;
+
+  for (const p of projects) {
+    const rowClass = {
+      red: 'row-red', orange: 'row-orange', yellow: 'row-yellow',
+      recup: 'row-green', impossible: 'row-purple'
+    }[p._urgency] || '';
+
+    const badge = getBadge(p.statut);
+    const dateStr = formatDate(p.dernier_contact, p._urgency);
+
+    html += `<tr class="${rowClass}" onclick="openModal('${p._chefId}', ${p.id})">
+      <td class="td-num"></td>
+      <td class="td-projet">${esc(p.projet)}</td>
+      <td class="td-prod">${esc(p.production)}</td>
+      <td class="td-real">${esc(p.real)}</td>
+      ${showChef ? `<td><span class="chef-badge">${esc(p._chefNom.split(' ')[0])}</span></td>` : ''}
+      <td>${badge}</td>
+      <td>${dateStr}</td>
+      <td class="td-notes">${esc(p.notes)}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  document.getElementById('content').innerHTML = html;
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  applyFilters();
+}
+
+function updateStats(projects) {
+  const total = projects.length;
+  const recup = projects.filter(p => p.statut === 'Récupéré').length;
+  const enCours = projects.filter(p => p.statut === 'En cours').length;
+  const urgent = projects.filter(p => p._urgency === 'red').length;
+  document.getElementById('statsbar').innerHTML = `
+    <div class="stat"><strong>${total}</strong> projets</div>
+    <div class="stat" style="color:var(--green)"><strong>${recup}</strong> récupérés</div>
+    <div class="stat" style="color:var(--yellow)"><strong>${enCours}</strong> en cours</div>
+    <div class="stat" style="color:var(--red)"><strong>${urgent}</strong> urgents (+90j)</div>`;
+}
+
+// ===================== RENDER RELANCES =====================
+function renderRelances() {
+  currentView = 'relances';
+  document.getElementById('filters').style.display = 'none';
+  document.getElementById('page-title').textContent = '📅 Relances du jour';
+  document.getElementById('statsbar').innerHTML = '';
+
+  const all = getAllRelances().filter(p => p.statut !== 'Récupéré' && p.statut !== 'Impossible !');
+
+  const groups = [
+    { key: 'red', label: 'Urgents (+90 jours sans contact)', color: 'var(--red)', items: [] },
+    { key: 'orange', label: 'À relancer (+30 jours)', color: 'var(--orange)', items: [] },
+    { key: 'yellow', label: 'En attente (-30 jours)', color: 'var(--yellow)', items: [] },
+  ];
+
+  for (const p of all) {
+    const g = groups.find(g => g.key === p._urgency);
+    if (g) g.items.push(p);
+  }
+
+  let html = '';
+  for (const g of groups) {
+    if (!g.items.length) continue;
+    g.items.sort((a, b) => (daysSince(a.dernier_contact) || 9999) < (daysSince(b.dernier_contact) || 9999) ? 1 : -1);
+    html += `<div class="relance-group">
+      <h2><span class="urgency-dot" style="background:${g.color}"></span>${g.label} (${g.items.length})</h2>`;
+    for (const p of g.items) {
+      const days = daysSince(p.dernier_contact);
+      const dayStr = days === null ? 'Jamais contacté' : `${days}j sans contact`;
+      html += `<div class="relance-card" onclick="openModal('${p._chefId}', ${p.id})">
+        <div class="relance-card-info">
+          <div class="relance-card-title">${esc(p.projet)}</div>
+          <div class="relance-card-sub">${esc(p.production)}${p.real ? ' · ' + esc(p.real) : ''}</div>
+          <div class="relance-card-chef">👤 ${esc(p._chefNom)} · ${dayStr}</div>
+          ${p.notes ? `<div class="relance-card-sub" style="margin-top:4px;font-style:italic">${esc(p.notes)}</div>` : ''}
+        </div>
+        <div class="relance-card-action">
+          <button class="btn btn-primary" onclick="event.stopPropagation();openModal('${p._chefId}', ${p.id})">✉️ Email</button>
+        </div>
+      </div>`;
+    }
+    html += '</div>';
+  }
+
+  if (!html) html = '<div class="empty"><div class="empty-icon">✅</div><p>Aucune relance pour aujourd\'hui !</p></div>';
+  document.getElementById('content').innerHTML = html;
+}
+
+// ===================== MODAL =====================
+function openModal(chefId, projetId) {
+  const co = DATA.chef_ops.find(c => c.id === chefId);
+  const p = co.projets.find(pr => pr.id === projetId);
+  editingProjet = { chefId, projetId };
+
+  document.getElementById('modal-title').textContent = p.projet;
+  document.getElementById('modal-sub').textContent = `${co.nom} · ${p.production || 'Production inconnue'}`;
+  document.getElementById('f-projet').value = p.projet;
+  document.getElementById('f-production').value = p.production || '';
+  document.getElementById('f-real').value = p.real || '';
+  document.getElementById('f-statut').value = p.statut;
+  document.getElementById('f-contact').value = p.dernier_contact || '';
+  document.getElementById('f-sortie').value = p.date_sortie_prevue || '';
+  document.getElementById('f-email').value = p.contact_email || '';
+  document.getElementById('f-notes').value = p.notes || '';
+
+  generateEmail(p, co.nom);
+
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  editingProjet = null;
+}
+
+function saveModal() {
+  if (!editingProjet) return;
+  const { chefId, projetId } = editingProjet;
+  const co = DATA.chef_ops.find(c => c.id === chefId);
+  const p = co.projets.find(pr => pr.id === projetId);
+
+  p.projet = document.getElementById('f-projet').value;
+  p.production = document.getElementById('f-production').value;
+  p.real = document.getElementById('f-real').value;
+  p.statut = document.getElementById('f-statut').value;
+  p.dernier_contact = document.getElementById('f-contact').value || null;
+  p.date_sortie_prevue = document.getElementById('f-sortie').value || null;
+  p.contact_email = document.getElementById('f-email').value || null;
+  p.notes = document.getElementById('f-notes').value;
+
+  closeModal();
+  buildSidebar();
+  applyFilters();
+  showNotif('✅ Projet mis à jour');
+}
+
+// ===================== EMAIL GENERATOR =====================
+function detectLang(production) {
+  if (!production) return 'fr';
+  const prod = production.toLowerCase();
+  const enKeywords = ['film', 'productions', 'pictures', 'studios', 'entertainment', 'creative', 'media group', 'ltd', 'llc', 'inc', 'limited', 'gmbh', 'bv', 'ag'];
+  const frKeywords = ['production', 'films', 'cinéma', 'société', 'sarl', 'sas', 'sa ', 'studio'];
+  let enScore = enKeywords.filter(k => prod.includes(k)).length;
+  let frScore = frKeywords.filter(k => prod.includes(k)).length;
+  // Domain-based hints
+  if (prod.includes('germany') || prod.includes('deutsch') || prod.includes('gmbh')) return 'en'; // international
+  if (prod.includes('américain') || prod.includes('american') || prod.includes('uk ') || prod.includes('british')) return 'en';
+  return frScore >= enScore ? 'fr' : 'en';
+}
+
+function generateEmail(p, chefNom) {
+  const lang = detectLang(p.production);
+  const prod = p.production || 'votre société';
+  const film = p.projet;
+  const real = p.real ? (lang === 'fr' ? `réalisé par ${p.real}` : `directed by ${p.real}`) : '';
+  const prenom = chefNom.split(' ')[0];
+
+  let subject, body;
+  if (lang === 'fr') {
+    subject = `Demande de récupération – ${film}`;
+    body = `Bonjour,
+
+Je me permets de vous contacter au nom de ${prenom}, directeur de la photographie${real ? ' du film ' + real : ''}.
+
+Nous souhaiterions récupérer le film **${film}** produit par ${prod}, afin de l'intégrer à la bibliothèque de référence de ${prenom}.
+
+Pourriez-vous nous indiquer la procédure à suivre pour obtenir une copie du film ?
+
+Nous vous remercions par avance de votre retour.
+
+Bien cordialement,
+Gus – kinou.fr`;
+  } else {
+    subject = `Film recovery request – ${film}`;
+    body = `Dear team,
+
+I am reaching out on behalf of ${prenom}, director of photography${real ? ' of ' + real : ''}.
+
+We would like to recover the film **${film}** produced by ${prod}, in order to add it to ${prenom}'s reference library.
+
+Could you please let us know the procedure to obtain a copy of the film?
+
+Thank you in advance for your reply.
+
+Best regards,
+Gus – kinou.fr`;
+  }
+
+  document.getElementById('email-content').innerHTML = `
+    <div><span class="lang-tag ${lang === 'fr' ? 'lang-fr' : 'lang-en'}">${lang === 'fr' ? '🇫🇷 Français' : '🇬🇧 English'}</span></div>
+    <div style="margin-bottom:8px;font-size:12px;color:var(--text2)"><strong>Objet :</strong> ${esc(subject)}</div>
+    <div class="email-box ${lang}" id="email-body">${esc(body)}</div>`;
+}
+
+function copyEmail() {
+  const el = document.getElementById('email-body');
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => showNotif('📋 Email copié !'));
+}
+
+// ===================== UTILS =====================
+function getBadge(statut) {
+  const map = {
+    'Pas commencé': ['badge-pas', 'Pas commencé'],
+    'En cours': ['badge-cours', 'En cours'],
+    'Récupéré': ['badge-recup', '✓ Récupéré'],
+    'Impossible !': ['badge-impossible', '✕ Impossible'],
+  };
+  const [cls, label] = map[statut] || ['badge-pas', statut];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function formatDate(dateStr, urgency) {
+  if (!dateStr) return '<span class="date-red">Jamais</span>';
+  const days = daysSince(dateStr);
+  const d = new Date(dateStr).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
+  const cls = { red: 'date-red', orange: 'date-orange', yellow: 'date-yellow', recup: 'date-ok', impossible: 'date-ok' }[urgency] || 'date-ok';
+  const daysStr = days !== null ? ` (${days}j)` : '';
+  return `<span class="${cls}">${d}${daysStr}</span>`;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showNotif(msg) {
+  const n = document.createElement('div');
+  n.className = 'notif';
+  n.textContent = msg;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 3000);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
