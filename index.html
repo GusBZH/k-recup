@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.5';
+const APP_VERSION = '2026-10-06.6';
 
 (function checkVersion() {
   async function check() {
@@ -797,13 +797,19 @@ function buildFilters() {
 
 function setStatusFilter(s, btn) {
   statusFilter = s;
+  urgencyFilter = null;
   document.querySelectorAll('#filters .filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   applyFilters();
 }
 function setUrgencyFilter(u, btn) {
-  if (urgencyFilter===u) { urgencyFilter=null; btn.classList.remove('active'); }
-  else { urgencyFilter=u; document.querySelectorAll('#filters .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  if (urgencyFilter===u) {
+    urgencyFilter=null; btn.classList.remove('active');
+  } else {
+    urgencyFilter=u; statusFilter=null;
+    document.querySelectorAll('#filters .filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  }
   applyFilters();
 }
 
@@ -1278,10 +1284,9 @@ function renderGroupeEmail() {
     subject = `Récupération de films | Kinou`;
     greeting = `Hello l'équipe ${prodName},`;
     if (isRelance) {
-      const nbFilms = films.length;
       intro = chefs.length<=3
-        ? `Je me permets de vous relancer concernant ${nbFilms===1?'un film':'des films'} sur lequel ${chefs.length===1?chefsStr:chefsStr} ${chefs.length===1?'a':'ont'} travaillé.\nEst-ce que ce serait possible de nous envoyer ${nbFilms===1?'un lien pour le télécharger':'des liens pour les télécharger'} ?`
-        : `Je me permets de vous relancer concernant ${nbFilms===1?'un film':'des films'} sur lesquels nos chef opérateurs ont travaillé.\nEst-ce que ce serait possible de nous envoyer ${nbFilms===1?'un lien pour le télécharger':'des liens pour les télécharger'} ?`;
+        ? `Je me permets de vous relancer concernant certains films sur lesquels ${chefsStr} ${chefs.length===1?'a':'ont'} travaillé.\nEst-ce que ce serait possible de nous envoyer des liens pour télécharger les films suivants :`
+        : `Je me permets de vous relancer concernant certains films sur lesquels nos chef opérateurs ont travaillé.\nEst-ce que ce serait possible de nous envoyer des liens pour télécharger les films suivants :`;
     } else {
       intro = chefs.length<=3
         ? `Je cherche à récupérer certains films sur lesquels ${chefsStr} ${chefs.length===1?'a':'ont'} travaillé. Ce serait super si vous pouviez m'envoyer le master de ces films :`
@@ -1358,22 +1363,15 @@ function openModal(chefId, projetId) {
 
 function renderIndividualEmail(p, chefNom) {
   const lang = currentEmailLang;
-  const genreIcon = p.genre==='F'?'♀️':p.genre==='M'?'♂️':'';
-  const chefDisplay = `${genreIcon} ${chefNom}`.trim();
-
   const nomFilm = cleanProjet(p.projet)||'[Film]';
   const isRelance = isRelanceView();
-  // Genre : priorité au champ du formulaire (live preview), sinon niveau chef op
-  const formGenre = document.getElementById('f-genre')?.value;
-  const chefGe = formGenre || p.genre || getChefGenre(editingProjet?.chefId||'');
-  const genreTag = chefGe==='F'?' (♀️)':chefGe==='M'?' (♂️)':'';
   let subject, body;
   if (lang==='fr') {
     subject = `${nomFilm} | ${p.real||'[Réal]'} | ${chefNom}`;
     if (isRelance) {
-      body = `Hello [prénom],\n\nJe me permets de vous relancer concernant le film ${nomFilm} sur lequel notre chef opérateur${genreTag} ${chefNom} a travaillé.\nEst-ce que ce serait possible de nous envoyer un lien pour le télécharger ?\n\nMerci d'avance,\nBelle journée,`;
+      body = `Hello [prénom],\n\nJe me permets de vous relancer concernant le film ${nomFilm} sur lequel notre chef opérateur ${chefNom} a travaillé.\nEst-ce que ce serait possible de nous envoyer un lien pour le télécharger ?\n\nMerci d'avance,\nBelle journée,`;
     } else {
-      body = `Hello [prénom],\n\nEst-ce que ce serait possible de m'envoyer le film ${nomFilm} sur lequel notre chef opérateur${genreTag} ${chefNom} a travaillé ?\n\nMerci d'avance,\nBelle journée,`;
+      body = `Hello [prénom],\n\nEst-ce que ce serait possible de m'envoyer le film ${nomFilm} sur lequel notre chef opérateur ${chefNom} a travaillé ?\n\nMerci d'avance,\nBelle journée,`;
     }
   } else {
     subject = `${nomFilm} | ${p.real||'[Dir]'} | ${chefNom}`;
