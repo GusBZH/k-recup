@@ -220,7 +220,7 @@
 
       #topbar { padding: 10px 12px; gap: 8px; }
       #topbar h1 { font-size: 14px; }
-      .search-box { width: 100%; font-size: 13px; }
+      .search-box { width: 130px; font-size: 12px; padding: 6px 9px; }
 
       #filters { padding: 8px 12px; gap: 6px; overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
       #filters::-webkit-scrollbar { display: none; }
@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.4';
+const APP_VERSION = '2026-10-06.5';
 
 (function checkVersion() {
   async function check() {
@@ -895,14 +895,14 @@ function renderTable() {
     const chefId = p._chefId; const pid = p.id;
     html += `<tr class="${rc}" onclick="openModal('${chefId}',${pid})">
       <td></td>
-      <td class="td-projet editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'projet')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${relanceBadge}${esc(cleanProjet(p.projet))}<span class="edit-hint">✎</span></td>
-      <td class="td-prod editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'production')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.production)}<span class="edit-hint">✎</span></td>
-      <td class="td-real editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'real')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.real)}<span class="edit-hint">✎</span></td>
+      <td class="td-projet editable-cell" onclick="event.stopPropagation();inlineEditText(event,'${chefId}',${pid},'projet')">${relanceBadge}${esc(cleanProjet(p.projet))}<span class="edit-hint">✎</span></td>
+      <td class="td-prod editable-cell" onclick="event.stopPropagation();inlineEditText(event,'${chefId}',${pid},'production')">${esc(p.production)}<span class="edit-hint">✎</span></td>
+      <td class="td-real editable-cell" onclick="event.stopPropagation();inlineEditText(event,'${chefId}',${pid},'real')">${esc(p.real)}<span class="edit-hint">✎</span></td>
       ${showChef?`<td class="editable-cell" onclick="event.stopPropagation();inlineChefDrop(event,'${chefId}',${pid})"><span class="chef-badge">${ge?ge+' ':''}${esc(p._chefNom)}</span></td>`:''}
       <td>${formatTournage(p)}</td>
       <td class="editable-cell" onclick="event.stopPropagation();inlineStatutDrop(event,'${chefId}',${pid})">${getBadge(p.statut)}</td>
       <td class="editable-cell" onclick="event.stopPropagation();inlineDatePick(event,'${chefId}',${pid},'dernier_contact')">${formatDate(p.dernier_contact, p._urgency)}</td>
-      <td class="td-notes editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'notes')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.notes)}<span class="edit-hint">✎</span></td>
+      <td class="td-notes editable-cell" onclick="event.stopPropagation();inlineEditText(event,'${chefId}',${pid},'notes')">${esc(p.notes)}<span class="edit-hint">✎</span></td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -1227,6 +1227,7 @@ function openGroupeEmail(prodName) {
 
   renderGroupeEmail();
   document.getElementById('modal-groupe').style.display = 'flex';
+  history.pushState({ kinouModal: 'groupe' }, '');
 }
 
 function getSelectedFilms() {
@@ -1257,7 +1258,6 @@ function renderGroupeEmail() {
     if (lang==='fr') filmsList += `\nRéalisé par ${real} :\n`;
     else filmsList += `\nDirected by ${real}:\n`;
     for (const f of rfilms) {
-      const geText = getChefGenre(f._chefId)==='F' ? '♀ ' : getChefGenre(f._chefId)==='M' ? '♂ ' : '';
       // Dates de tournage
       let tournageStr = '';
       if (f.date_tournage_debut && f.date_tournage_fin) {
@@ -1269,7 +1269,7 @@ function renderGroupeEmail() {
       } else if (f.annee_tournage) {
         tournageStr = lang==='fr' ? ` | Tourné en ${f.annee_tournage}` : ` | Filmed in ${f.annee_tournage}`;
       }
-      filmsList += `\t• ${cleanProjet(f.projet)} | Chef op : ${geText}${f._chefNom}${tournageStr}\n`;
+      filmsList += `\t• ${cleanProjet(f.projet)} | Chef op : ${f._chefNom}${tournageStr}\n`;
     }
   }
 
@@ -1323,7 +1323,10 @@ function copyGroupeEmail() {
   navigator.clipboard.writeText(el.textContent).then(()=>showNotif('📋 Email copié !'));
 }
 
-function closeModalGroupe() { document.getElementById('modal-groupe').style.display='none'; }
+function closeModalGroupe(fromPopstate) {
+  document.getElementById('modal-groupe').style.display='none';
+  if (!fromPopstate && history.state && history.state.kinouModal==='groupe') history.back();
+}
 
 // ===================== MODAL INDIVIDUEL =====================
 function openModal(chefId, projetId) {
@@ -1350,6 +1353,7 @@ function openModal(chefId, projetId) {
 
   renderIndividualEmail(p, co.nom);
   document.getElementById('modal').style.display = 'flex';
+  history.pushState({ kinouModal: 'projet' }, '');
 }
 
 function renderIndividualEmail(p, chefNom) {
@@ -1435,7 +1439,10 @@ function saveModal() {
   scheduleAutoSave();
 }
 
-function closeModal() { document.getElementById('modal').style.display='none'; editingProjet=null; }
+function closeModal(fromPopstate) {
+  document.getElementById('modal').style.display='none'; editingProjet=null;
+  if (!fromPopstate && history.state && history.state.kinouModal==='projet') history.back();
+}
 
 function showNotif(msg) {
   const n = document.createElement('div');
@@ -1445,6 +1452,14 @@ function showNotif(msg) {
 }
 
 document.addEventListener('keydown', e=>{ if(e.key==='Escape'){closeModal();closeModalGroupe();} });
+
+window.addEventListener('popstate', e => {
+  if (document.getElementById('modal').style.display==='flex') {
+    closeModal(true);
+  } else if (document.getElementById('modal-groupe').style.display==='flex') {
+    closeModalGroupe(true);
+  }
+});
 </script>
 </body>
 </html>
