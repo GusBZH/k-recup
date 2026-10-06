@@ -389,14 +389,27 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.2';
+const APP_VERSION = '2026-10-06.3';
 
 (function checkVersion() {
   async function check() {
     try {
-      const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
-      const json = await res.json();
-      if (json.version && json.version !== APP_VERSION) showVersionBanner();
+      // Lire version.json via l'API GitHub pour bypasser le CDN Pages
+      const token = getGhToken();
+      let ver;
+      if (token) {
+        const r = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/version.json?ref=gh-pages&t=${Date.now()}`,
+          { cache: 'no-store', headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+        if (r.ok) {
+          const j = await r.json();
+          ver = JSON.parse(atob(j.content.replace(/\n/g, ''))).version;
+        }
+      }
+      if (!ver) {
+        const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        ver = (await res.json()).version;
+      }
+      if (ver && ver !== APP_VERSION) showVersionBanner();
     } catch {}
   }
   check();
