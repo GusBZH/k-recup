@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.7';
+const APP_VERSION = '2026-10-06.8';
 
 (function checkVersion() {
   async function check() {
@@ -791,8 +791,9 @@ function buildFilters() {
     <div class="filter-sep"></div>
     <span class="filter-label">Relance :</span>
     <button class="filter-btn" onclick="setUrgencyFilter('relance',this)">📅 Programmées</button>
-    <button class="filter-btn" onclick="setUrgencyFilter('red',this)">🔴 +90j</button>
-    <button class="filter-btn" onclick="setUrgencyFilter('orange',this)">🟠 +30j</button>`;
+    <button class="filter-btn" onclick="setUrgencyFilter('global',this)">🔴 Relance globale</button>
+    <button class="filter-btn" onclick="setUrgencyFilter('red',this)">+90j</button>
+    <button class="filter-btn" onclick="setUrgencyFilter('orange',this)">+30j</button>`;
 }
 
 function setStatusFilter(s, btn) {
@@ -848,7 +849,8 @@ function getFiltered() {
     p.real.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||
     p._chefNom.toLowerCase().includes(q));
   if (statusFilter) projects = projects.filter(p=>p.statut===statusFilter);
-  if (urgencyFilter) projects = projects.filter(p=>p._urgency===urgencyFilter);
+  if (urgencyFilter === 'global') projects = projects.filter(p=>p._urgency==='red'||p._urgency==='orange');
+  else if (urgencyFilter) projects = projects.filter(p=>p._urgency===urgencyFilter);
   const urgOrd = {relance:0,red:1,orange:2,yellow:3,recup:4,impossible:5};
   projects.sort((a,b)=>{
     let va,vb;
@@ -877,7 +879,7 @@ function renderTable() {
   document.getElementById('statsbar').innerHTML = `
     <div class="stat"><strong>${total}</strong> projets</div>
     <div class="stat" style="color:var(--green)"><strong>${recup}</strong> récupérés</div>
-    <div class="stat" style="color:var(--red)"><strong>${urgent}</strong> urgents</div>`;
+    <div class="stat" style="color:var(--red)"><strong>${urgent}</strong> à relancer</div>`;
 
   if (!projects.length) { document.getElementById('content').innerHTML='<div class="empty"><div class="empty-icon">🔍</div><p>Aucun projet trouvé</p></div>'; return; }
 
@@ -1062,7 +1064,7 @@ function renderRelances() {
 
   const groups = [
     { key:'relance', label:'Relances programmées', color:'var(--accent2)', items:[] },
-    { key:'red', label:'Urgents (+90j ou sortie imminente)', color:'var(--red)', items:[] },
+    { key:'red', label:'À relancer (+90j ou sortie imminente)', color:'var(--red)', items:[] },
     { key:'orange', label:'À relancer (+30j)', color:'var(--orange)', items:[] },
     { key:'yellow', label:'En attente (-30j)', color:'var(--yellow)', items:[] },
   ];
@@ -1121,7 +1123,7 @@ function renderRelancesProd() {
   let html = '';
   for (const [prodName, films] of prods) {
     const urgentCount = films.filter(p=>['red','relance'].includes(p._urgency)).length;
-    const urgentBadge = urgentCount ? `<span class="badge badge-cours" style="margin-left:8px">${urgentCount} urgents</span>` : '';
+    const urgentBadge = urgentCount ? `<span class="badge badge-cours" style="margin-left:8px">${urgentCount} à relancer</span>` : '';
     html += `<div class="prod-group prod-collapsed">
       <div class="prod-header" onclick="toggleProd(this)">
         <span class="prod-name">${esc(prodName)}</span>
@@ -1177,7 +1179,7 @@ function renderProductions() {
   let html = '';
   for (const [prodName, films] of prods) {
     const urgentCount = films.filter(p=>['red','relance'].includes(p._urgency)).length;
-    const urgentBadge = urgentCount ? `<span class="badge badge-cours" style="margin-left:8px">${urgentCount} urgents</span>` : '';
+    const urgentBadge = urgentCount ? `<span class="badge badge-cours" style="margin-left:8px">${urgentCount} à relancer</span>` : '';
     html += `<div class="prod-group prod-collapsed" id="pg-${btoa(encodeURIComponent(prodName)).slice(0,12)}">
       <div class="prod-header" onclick="toggleProd(this)">
         <span class="prod-name">${esc(prodName)}</span>
