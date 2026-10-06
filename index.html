@@ -82,7 +82,7 @@
 
     .date-ok { color: var(--text2); font-size: 12px; }
     .date-yellow { color: var(--yellow); font-size: 12px; }
-    .date-orange { color: var(--orange); font-size: 12px; }
+    .date-orange { color: var(--yellow); font-size: 12px; }
     .date-red { color: var(--red); font-size: 12px; font-weight: 600; }
     .date-relance { color: var(--accent2); font-size: 12px; font-weight: 600; }
 
@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.8';
+const APP_VERSION = '2026-10-06.9';
 
 (function checkVersion() {
   async function check() {
@@ -718,7 +718,7 @@ function formatDate(dateStr, urgency) {
   if (!dateStr) return '<span style="color:var(--text2);font-size:12px">Jamais</span>';
   const days = daysSince(dateStr);
   const d = new Date(dateStr).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
-  const cls = {red:'date-red',orange:'date-orange',yellow:'date-yellow',recup:'date-ok',impossible:'date-ok',relance:'date-relance'}[urgency]||'date-ok';
+  const cls = {red:'date-red',orange:'date-yellow',yellow:'date-yellow',recup:'date-ok',impossible:'date-ok',relance:'date-relance'}[urgency]||'date-ok';
   return `<span class="${cls}">${d} (${days}j)</span>`;
 }
 
@@ -896,7 +896,7 @@ function renderTable() {
   </tr></thead><tbody>`;
 
   for (const p of projects) {
-    const rc = {red:'row-red',orange:'row-orange',yellow:'row-yellow',recup:'row-green',impossible:'row-purple',relance:'row-relance'}[p._urgency]||'';
+    const rc = {red:'row-red',orange:'row-yellow',yellow:'row-yellow',recup:'row-green',impossible:'row-purple',relance:'row-relance'}[p._urgency]||'';
     const relanceBadge = p._urgency==='relance' ? `<span class="badge badge-relance">📅 Relance</span> ` : '';
     const chefGenre = getChefGenre(p._chefId);
     const ge = genreEmoji(chefGenre);
@@ -1063,9 +1063,9 @@ function renderRelances() {
   const all = getAllProjects().filter(p=>p.statut!=='Récupéré'&&p.statut!=='Impossible !');
 
   const groups = [
-    { key:'relance', label:'Relances programmées', color:'var(--accent2)', items:[] },
+    { key:'relance', label:'Relances programmées', color:'#ffffff', items:[] },
     { key:'red', label:'À relancer (+90j ou sortie imminente)', color:'var(--red)', items:[] },
-    { key:'orange', label:'À relancer (+30j)', color:'var(--orange)', items:[] },
+    { key:'orange', label:'À relancer (+30j)', color:'var(--yellow)', items:[] },
     { key:'yellow', label:'En attente (-30j)', color:'var(--yellow)', items:[] },
   ];
 
@@ -1137,7 +1137,7 @@ function renderRelancesProd() {
     films.sort((a,b)=>(a.real||'').localeCompare(b.real||'')||(a.projet||'').localeCompare(b.projet||''));
     for (const p of films) {
       const ge = genreEmoji(getChefGenre(p._chefId));
-      const urgColor = {red:'var(--red)',orange:'var(--orange)',relance:'var(--accent2)'}[p._urgency]||'var(--text2)';
+      const urgColor = {red:'var(--red)',orange:'var(--yellow)',relance:'var(--accent2)'}[p._urgency]||'var(--text2)';
       const days = daysSince(p.dernier_contact);
       const dayStr = days===null?'Jamais contacté':`${days}j sans contact`;
       const anneeStr2 = p.annee_tournage ? ` | Tourné en ${esc(p.annee_tournage)}` : '';
