@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.9';
+const APP_VERSION = '2026-10-06.10';
 
 (function checkVersion() {
   async function check() {
@@ -791,9 +791,9 @@ function buildFilters() {
     <div class="filter-sep"></div>
     <span class="filter-label">Relance :</span>
     <button class="filter-btn" onclick="setUrgencyFilter('relance',this)">📅 Programmées</button>
-    <button class="filter-btn" onclick="setUrgencyFilter('global',this)">🔴 Relance globale</button>
-    <button class="filter-btn" onclick="setUrgencyFilter('red',this)">+90j</button>
-    <button class="filter-btn" onclick="setUrgencyFilter('orange',this)">+30j</button>`;
+    <button class="filter-btn" onclick="setUrgencyFilter('global',this)">⚪ Relance globale</button>
+    <button class="filter-btn" onclick="setUrgencyFilter('red',this)">🔴 +90j</button>
+    <button class="filter-btn" onclick="setUrgencyFilter('orange',this)">🟡 +30j</button>`;
 }
 
 function setStatusFilter(s, btn) {
