@@ -161,6 +161,22 @@
     .notif { position: fixed; bottom: 20px; right: 20px; background: var(--surface); border: 1px solid var(--green); color: var(--text); padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 200; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
+    /* ===================== INLINE EDITING ===================== */
+    .inline-dropdown { position: fixed; background: var(--surface); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 300; min-width: 160px; overflow: hidden; }
+    .inline-dropdown-item { padding: 9px 14px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+    .inline-dropdown-item:hover { background: var(--surface2); }
+    .inline-dropdown-item.active { color: var(--accent2); }
+    .inline-date-picker { position: fixed; background: var(--surface); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 300; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .inline-date-picker input[type=date] { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text); font-size: 13px; outline: none; }
+    .inline-date-picker input[type=date]:focus { border-color: var(--accent); }
+    .inline-date-btns { display: flex; gap: 6px; justify-content: flex-end; }
+    .inline-edit-input { background: var(--surface2); border: 1px solid var(--accent); border-radius: 4px; color: var(--text); font-size: 13px; padding: 3px 7px; outline: none; width: 100%; font-family: var(--font); min-width: 80px; }
+    td.editable-cell { position: relative; }
+    td.editable-cell:hover .edit-hint { opacity: 1; }
+    .edit-hint { opacity: 0; font-size: 10px; color: var(--accent2); margin-left: 4px; transition: opacity 0.15s; pointer-events: none; }
+    .td-tournage { font-size: 12px; color: var(--text2); white-space: nowrap; }
+    .td-tournage-val { color: var(--text); font-size: 12px; }
+
     /* ===================== RESPONSIVE MOBILE ===================== */
     #sidebar-toggle {
       display: none;
@@ -217,10 +233,10 @@
       /* Table mobile : masquer colonnes secondaires */
       table thead th:nth-child(3),
       table thead th:nth-child(4),
-      table thead th:nth-child(7) { display: none; }
+      table thead th:nth-child(9) { display: none; }
       table tbody td:nth-child(3),
       table tbody td:nth-child(4),
-      table tbody td:nth-child(7) { display: none; }
+      table tbody td:nth-child(9) { display: none; }
       tbody td { padding: 8px 10px; font-size: 12px; }
       thead th { padding: 8px 10px; font-size: 10px; }
 
@@ -291,7 +307,7 @@
           <div class="field"><label>Réalisateur</label><input id="f-real" type="text" /></div>
           <div class="field"><label>Statut</label>
             <select id="f-statut">
-              <option>Pas commencé</option><option>En cours</option><option>Récupéré</option><option>Impossible !</option>
+              <option>Pas commencé</option><option>Demandé</option><option>Récupéré</option><option>Impossible !</option>
             </select>
           </div>
         </div>
@@ -300,8 +316,12 @@
           <div class="field"><label>Date de sortie prévue</label><input id="f-sortie" type="date" /></div>
           <div class="field"><label>📅 Me relancer le</label><input id="f-relance" type="date" title="Je te rappellerai de recontacter cette date" /></div>
         </div>
-        <div class="field-row">
+        <div class="field-row-3">
+          <div class="field"><label>🎬 Début tournage</label><input id="f-tournage-debut" type="date" /></div>
+          <div class="field"><label>🎬 Fin tournage</label><input id="f-tournage-fin" type="date" /></div>
           <div class="field"><label>Année de tournage</label><input id="f-annee" type="text" placeholder="ex: 2023" /></div>
+        </div>
+        <div class="field-row">
           <div class="field"><label>Email contact prod</label><input id="f-email" type="email" /></div>
         </div>
         <div class="field-row">
@@ -381,15 +401,15 @@ let currentView = 'table'; // 'table' | 'relances' | 'productions'
 let currentChefId = null;
 let statusFilter = null;
 let urgencyFilter = null;
-let sortCol = 'urgency';
-let sortDir = 1;
+let sortCol = 'tournage';
+let sortDir = -1;
 let editingProjet = null;
 let currentEmailLang = 'fr';
 let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.3';
+const APP_VERSION = '2026-10-06.4';
 
 (function checkVersion() {
   async function check() {
@@ -689,13 +709,13 @@ function noDash(s) { return (s||'').replace(/\s*—\s*/g, ' | ').replace(/^\s*\|
 function isRelanceView() { return currentView==='relances'||currentView==='relances-prod'; }
 
 function getBadge(statut) {
-  const map = { 'Pas commencé':['badge-pas','Pas commencé'], 'En cours':['badge-cours','En cours'], 'Récupéré':['badge-recup','✓ Récupéré'], 'Impossible !':['badge-impossible','✕ Impossible'] };
+  const map = { 'Pas commencé':['badge-pas','Pas commencé'], 'Demandé':['badge-cours','Demandé'], 'En cours':['badge-cours','Demandé'], 'Récupéré':['badge-recup','✓ Récupéré'], 'Impossible !':['badge-impossible','✕ Impossible'] };
   const [cls,label] = map[statut]||['badge-pas',statut];
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
 function formatDate(dateStr, urgency) {
-  if (!dateStr) return '<span class="date-red">Jamais</span>';
+  if (!dateStr) return '<span style="color:var(--text2);font-size:12px">Jamais</span>';
   const days = daysSince(dateStr);
   const d = new Date(dateStr).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
   const cls = {red:'date-red',orange:'date-orange',yellow:'date-yellow',recup:'date-ok',impossible:'date-ok',relance:'date-relance'}[urgency]||'date-ok';
@@ -708,6 +728,28 @@ function getAllProjects() {
     for (const p of co.projets)
       all.push({...p, _chefId:co.id, _chefNom:co.nom, _urgency:urgencyLevel(p)});
   return all;
+}
+
+// Formate les dates de tournage "de ... à ..." ou juste l'année si pas de dates précises
+function formatTournage(p) {
+  const debut = p.date_tournage_debut||'';
+  const fin = p.date_tournage_fin||'';
+  if (!debut && !fin) {
+    if (p.annee_tournage) return `<span class="td-tournage-val">${esc(p.annee_tournage)}</span>`;
+    return '<span style="color:var(--text2);font-size:12px">—</span>';
+  }
+  const fmtD = d => new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
+  if (debut && fin) return `<span class="td-tournage">de </span><span class="td-tournage-val">${fmtD(debut)}</span><span class="td-tournage"> à </span><span class="td-tournage-val">${fmtD(fin)}</span>`;
+  if (debut) return `<span class="td-tournage">depuis </span><span class="td-tournage-val">${fmtD(debut)}</span>`;
+  return `<span class="td-tournage">jusqu'au </span><span class="td-tournage-val">${fmtD(fin)}</span>`;
+}
+
+// Valeur de tri pour dates de tournage (fin de tournage la plus récente d'abord)
+function tournageSortKey(p) {
+  if (p.date_tournage_fin) return p.date_tournage_fin;
+  if (p.date_tournage_debut) return p.date_tournage_debut;
+  if (p.annee_tournage) return p.annee_tournage + '-12-31';
+  return '0000-00-00';
 }
 
 // ===================== SIDEBAR =====================
@@ -743,7 +785,7 @@ function buildFilters() {
     <span class="filter-label">Statut :</span>
     <button class="filter-btn active" onclick="setStatusFilter(null,this)">Tous</button>
     <button class="filter-btn" onclick="setStatusFilter('Pas commencé',this)">Pas commencé</button>
-    <button class="filter-btn" onclick="setStatusFilter('En cours',this)">En cours</button>
+    <button class="filter-btn" onclick="setStatusFilter('Demandé',this)">Demandé</button>
     <button class="filter-btn" onclick="setStatusFilter('Récupéré',this)">Récupéré</button>
     <button class="filter-btn" onclick="setStatusFilter('Impossible !',this)">Impossible !</button>
     <div class="filter-sep"></div>
@@ -768,13 +810,18 @@ function setUrgencyFilter(u, btn) {
 // ===================== VIEWS =====================
 function showView(v) {
   currentView = v; currentChefId = null;
+  // Réinitialise les filtres urgence/statut quand on change de vue (évite que récupérés disparaissent)
+  urgencyFilter = null; statusFilter = null;
   document.getElementById('filters').style.display = v==='table'?'flex':'none';
+  buildFilters();
   buildSidebar(); applyFilters(); closeSidebar();
 }
 
 function showChef(id) {
   currentView = 'table'; currentChefId = id;
+  urgencyFilter = null; statusFilter = null;
   document.getElementById('filters').style.display = 'flex';
+  buildFilters();
   buildSidebar(); applyFilters(); closeSidebar();
 }
 
@@ -806,6 +853,7 @@ function getFiltered() {
     else if(sortCol==='statut'){va=a.statut;vb=b.statut;}
     else if(sortCol==='dernier_contact'){va=a.dernier_contact||'';vb=b.dernier_contact||'';}
     else if(sortCol==='chef'){va=a._chefNom;vb=b._chefNom;}
+    else if(sortCol==='tournage'){va=tournageSortKey(a);vb=tournageSortKey(b);}
     if(va<vb)return -sortDir; if(va>vb)return sortDir; return 0;
   });
   return projects;
@@ -833,6 +881,7 @@ function renderTable() {
     <th onclick="sortBy('production')" class="${sortCol==='production'?'sorted':''}">Production</th>
     <th onclick="sortBy('real')" class="${sortCol==='real'?'sorted':''}">Réal</th>
     ${showChef?`<th onclick="sortBy('chef')" class="${sortCol==='chef'?'sorted':''}">Chef op</th>`:''}
+    <th onclick="sortBy('tournage')" class="${sortCol==='tournage'?'sorted':''}">Dates tournage</th>
     <th onclick="sortBy('statut')" class="${sortCol==='statut'?'sorted':''}">Statut</th>
     <th onclick="sortBy('dernier_contact')" class="${sortCol==='dernier_contact'?'sorted':''}">Dernier contact</th>
     <th>Notes</th>
@@ -843,15 +892,17 @@ function renderTable() {
     const relanceBadge = p._urgency==='relance' ? `<span class="badge badge-relance">📅 Relance</span> ` : '';
     const chefGenre = getChefGenre(p._chefId);
     const ge = genreEmoji(chefGenre);
-    html += `<tr class="${rc}" onclick="openModal('${p._chefId}',${p.id})">
+    const chefId = p._chefId; const pid = p.id;
+    html += `<tr class="${rc}" onclick="openModal('${chefId}',${pid})">
       <td></td>
-      <td class="td-projet">${relanceBadge}${esc(cleanProjet(p.projet))}</td>
-      <td class="td-prod">${esc(p.production)}</td>
-      <td class="td-real">${esc(p.real)}</td>
-      ${showChef?`<td><span class="chef-badge">${ge?ge+' ':''}${esc(p._chefNom)}</span></td>`:''}
-      <td>${getBadge(p.statut)}</td>
-      <td>${formatDate(p.dernier_contact, p._urgency)}</td>
-      <td class="td-notes">${esc(p.notes)}</td>
+      <td class="td-projet editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'projet')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${relanceBadge}${esc(cleanProjet(p.projet))}<span class="edit-hint">✎</span></td>
+      <td class="td-prod editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'production')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.production)}<span class="edit-hint">✎</span></td>
+      <td class="td-real editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'real')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.real)}<span class="edit-hint">✎</span></td>
+      ${showChef?`<td class="editable-cell" onclick="event.stopPropagation();inlineChefDrop(event,'${chefId}',${pid})"><span class="chef-badge">${ge?ge+' ':''}${esc(p._chefNom)}</span></td>`:''}
+      <td>${formatTournage(p)}</td>
+      <td class="editable-cell" onclick="event.stopPropagation();inlineStatutDrop(event,'${chefId}',${pid})">${getBadge(p.statut)}</td>
+      <td class="editable-cell" onclick="event.stopPropagation();inlineDatePick(event,'${chefId}',${pid},'dernier_contact')">${formatDate(p.dernier_contact, p._urgency)}</td>
+      <td class="td-notes editable-cell" ondblclick="inlineEditText(event,'${chefId}',${pid},'notes')" onclick="event.stopPropagation()||openModal('${chefId}',${pid})">${esc(p.notes)}<span class="edit-hint">✎</span></td>
     </tr>`;
   }
   html += '</tbody></table>';
@@ -859,6 +910,143 @@ function renderTable() {
 }
 
 function sortBy(col) { if(sortCol===col)sortDir*=-1; else{sortCol=col;sortDir=1;} renderTable(); }
+
+// ===================== INLINE EDITING =====================
+
+let _activeInline = null;
+function closeInline() {
+  if (_activeInline) { _activeInline.remove(); _activeInline = null; }
+}
+document.addEventListener('click', e => {
+  if (_activeInline && !_activeInline.contains(e.target)) closeInline();
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInline(); });
+
+function positionOverlay(el, refRect) {
+  const vw = window.innerWidth; const vh = window.innerHeight;
+  let top = refRect.bottom + 4;
+  let left = refRect.left;
+  document.body.appendChild(el);
+  const er = el.getBoundingClientRect();
+  if (left + er.width > vw - 8) left = vw - er.width - 8;
+  if (top + er.height > vh - 8) top = refRect.top - er.height - 4;
+  el.style.top = top + 'px';
+  el.style.left = left + 'px';
+}
+
+function inlineStatutDrop(evt, chefId, projetId) {
+  evt.stopPropagation();
+  closeInline();
+  const co = DATA.chef_ops.find(c=>c.id===chefId);
+  const p = co.projets.find(pr=>pr.id===projetId);
+  const statuts = ['Pas commencé','Demandé','Récupéré','Impossible !'];
+  const div = document.createElement('div');
+  div.className = 'inline-dropdown';
+  div.innerHTML = statuts.map(s => {
+    const active = (p.statut===s||(p.statut==='En cours'&&s==='Demandé')) ? 'active' : '';
+    return `<div class="inline-dropdown-item ${active}" data-val="${s}">${getBadge(s)}</div>`;
+  }).join('');
+  div.querySelectorAll('.inline-dropdown-item').forEach(item => {
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      p.statut = item.dataset.val;
+      closeInline();
+      buildSidebar(); applyFilters();
+      scheduleAutoSave();
+    });
+  });
+  _activeInline = div;
+  positionOverlay(div, evt.currentTarget.getBoundingClientRect());
+}
+
+function inlineChefDrop(evt, chefId, projetId) {
+  evt.stopPropagation();
+  closeInline();
+  const co = DATA.chef_ops.find(c=>c.id===chefId);
+  const p = co.projets.find(pr=>pr.id===projetId);
+  const div = document.createElement('div');
+  div.className = 'inline-dropdown';
+  div.innerHTML = DATA.chef_ops.map(chef => {
+    const active = chef.id===chefId ? 'active' : '';
+    const ge = genreEmoji(chef.genre);
+    return `<div class="inline-dropdown-item ${active}" data-id="${chef.id}"><span class="chef-badge">${ge?ge+' ':''}${esc(chef.nom)}</span></div>`;
+  }).join('');
+  div.querySelectorAll('.inline-dropdown-item').forEach(item => {
+    item.addEventListener('click', e => {
+      e.stopPropagation();
+      const newChefId = item.dataset.id;
+      if (newChefId !== chefId) {
+        // Move project from old chef to new chef
+        const oldCoIdx = DATA.chef_ops.findIndex(c=>c.id===chefId);
+        const newCo = DATA.chef_ops.find(c=>c.id===newChefId);
+        const pIdx = DATA.chef_ops[oldCoIdx].projets.findIndex(pr=>pr.id===projetId);
+        const [moved] = DATA.chef_ops[oldCoIdx].projets.splice(pIdx,1);
+        newCo.projets.push(moved);
+        scheduleAutoSave();
+      }
+      closeInline();
+      buildSidebar(); applyFilters();
+    });
+  });
+  _activeInline = div;
+  positionOverlay(div, evt.currentTarget.getBoundingClientRect());
+}
+
+function inlineDatePick(evt, chefId, projetId, field) {
+  evt.stopPropagation();
+  closeInline();
+  const co = DATA.chef_ops.find(c=>c.id===chefId);
+  const p = co.projets.find(pr=>pr.id===projetId);
+  const div = document.createElement('div');
+  div.className = 'inline-date-picker';
+  div.innerHTML = `<input type="date" value="${p[field]||''}" />
+    <div class="inline-date-btns">
+      <button class="btn btn-ghost btn-sm" id="_idc-clear">Effacer</button>
+      <button class="btn btn-primary btn-sm" id="_idc-ok">OK</button>
+    </div>`;
+  const inp = div.querySelector('input');
+  div.querySelector('#_idc-ok').addEventListener('click', e => {
+    e.stopPropagation();
+    p[field] = inp.value || null;
+    closeInline(); buildSidebar(); applyFilters(); scheduleAutoSave();
+  });
+  div.querySelector('#_idc-clear').addEventListener('click', e => {
+    e.stopPropagation();
+    p[field] = null;
+    closeInline(); buildSidebar(); applyFilters(); scheduleAutoSave();
+  });
+  div.addEventListener('click', e => e.stopPropagation());
+  _activeInline = div;
+  positionOverlay(div, evt.currentTarget.getBoundingClientRect());
+  setTimeout(()=>inp.focus(),50);
+}
+
+function inlineEditText(evt, chefId, projetId, field) {
+  evt.stopPropagation();
+  closeInline();
+  const co = DATA.chef_ops.find(c=>c.id===chefId);
+  const p = co.projets.find(pr=>pr.id===projetId);
+  const td = evt.currentTarget;
+  const origHtml = td.innerHTML;
+  const input = document.createElement(field==='notes'?'textarea':'input');
+  input.className = 'inline-edit-input';
+  input.value = p[field]||'';
+  if (field==='notes') { input.rows=2; input.style.resize='vertical'; }
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus(); input.select();
+  function commit() {
+    p[field] = input.value;
+    applyFilters(); buildSidebar(); scheduleAutoSave();
+  }
+  function cancel() { td.innerHTML = origHtml; }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && field !== 'notes') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); input.removeEventListener('blur',commit); cancel(); }
+  });
+  input.addEventListener('click', e => e.stopPropagation());
+}
 
 // ===================== RELANCES =====================
 function renderRelances() {
@@ -1069,11 +1257,19 @@ function renderGroupeEmail() {
     if (lang==='fr') filmsList += `\nRéalisé par ${real} :\n`;
     else filmsList += `\nDirected by ${real}:\n`;
     for (const f of rfilms) {
-      const ge = genreEmoji(getChefGenre(f._chefId));
-      const annee = f.annee_tournage ? ` | Tourné en ${f.annee_tournage}` : '';
-      // Texte plain (pas SVG) — ce contenu finit dans esc() puis textContent
       const geText = getChefGenre(f._chefId)==='F' ? '♀ ' : getChefGenre(f._chefId)==='M' ? '♂ ' : '';
-      filmsList += `\t• ${cleanProjet(f.projet)} | Chef op : ${geText}${f._chefNom}${annee}\n`;
+      // Dates de tournage
+      let tournageStr = '';
+      if (f.date_tournage_debut && f.date_tournage_fin) {
+        const fmtD = d => new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+        tournageStr = lang==='fr' ? ` | Tourné de ${fmtD(f.date_tournage_debut)} à ${fmtD(f.date_tournage_fin)}` : ` | Filmed from ${fmtD(f.date_tournage_debut)} to ${fmtD(f.date_tournage_fin)}`;
+      } else if (f.date_tournage_debut) {
+        const fmtD = d => new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'});
+        tournageStr = lang==='fr' ? ` | Tournage depuis ${fmtD(f.date_tournage_debut)}` : ` | Filming from ${fmtD(f.date_tournage_debut)}`;
+      } else if (f.annee_tournage) {
+        tournageStr = lang==='fr' ? ` | Tourné en ${f.annee_tournage}` : ` | Filmed in ${f.annee_tournage}`;
+      }
+      filmsList += `\t• ${cleanProjet(f.projet)} | Chef op : ${geText}${f._chefNom}${tournageStr}\n`;
     }
   }
 
@@ -1146,6 +1342,8 @@ function openModal(chefId, projetId) {
   document.getElementById('f-sortie').value = p.date_sortie_prevue||'';
   document.getElementById('f-relance').value = p.date_relance||'';
   document.getElementById('f-annee').value = p.annee_tournage||'';
+  document.getElementById('f-tournage-debut').value = p.date_tournage_debut||'';
+  document.getElementById('f-tournage-fin').value = p.date_tournage_fin||'';
   document.getElementById('f-email').value = p.contact_email||'';
   document.getElementById('f-genre').value = co.genre||p.genre||'';
   document.getElementById('f-notes').value = p.notes||'';
@@ -1224,6 +1422,8 @@ function saveModal() {
   p.date_sortie_prevue = document.getElementById('f-sortie').value||null;
   p.date_relance = document.getElementById('f-relance').value||null;
   p.annee_tournage = document.getElementById('f-annee').value||'';
+  p.date_tournage_debut = document.getElementById('f-tournage-debut').value||null;
+  p.date_tournage_fin = document.getElementById('f-tournage-fin').value||null;
   p.contact_email = document.getElementById('f-email').value||'';
   // Genre sauvegardé au niveau du chef op (s'applique à tous ses films)
   co.genre = document.getElementById('f-genre').value||'';
