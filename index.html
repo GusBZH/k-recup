@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.6';
+const APP_VERSION = '2026-10-06.7';
 
 (function checkVersion() {
   async function check() {
@@ -572,7 +572,7 @@ function showGithubSettings() {
 // ===================== LOAD =====================
 // ===================== AUTH =====================
 const AUTH_KEY = 'kinou_auth';
-const AUTH_PWD = 'kinou2025'; // changer ici si besoin
+const AUTH_PWD = 'ki123nou';
 
 function checkAuth() {
   if (localStorage.getItem(AUTH_KEY) === 'ok') return true;
@@ -789,8 +789,8 @@ function buildFilters() {
     <button class="filter-btn" onclick="setStatusFilter('Récupéré',this)">Récupéré</button>
     <button class="filter-btn" onclick="setStatusFilter('Impossible !',this)">Impossible !</button>
     <div class="filter-sep"></div>
-    <span class="filter-label">Urgence :</span>
-    <button class="filter-btn" onclick="setUrgencyFilter('relance',this)">📅 Relances</button>
+    <span class="filter-label">Relance :</span>
+    <button class="filter-btn" onclick="setUrgencyFilter('relance',this)">📅 Programmées</button>
     <button class="filter-btn" onclick="setUrgencyFilter('red',this)">🔴 +90j</button>
     <button class="filter-btn" onclick="setUrgencyFilter('orange',this)">🟠 +30j</button>`;
 }
