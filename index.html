@@ -409,7 +409,7 @@ let currentGroupeLang = 'fr';
 let currentGroupeData = null;
 
 // ===================== VERSION BANNER =====================
-const APP_VERSION = '2026-10-06.10';
+const APP_VERSION = '2026-10-07.1';
 
 (function checkVersion() {
   async function check() {
@@ -848,7 +848,7 @@ function getFiltered() {
     p.projet.toLowerCase().includes(q)||p.production.toLowerCase().includes(q)||
     p.real.toLowerCase().includes(q)||p.notes.toLowerCase().includes(q)||
     p._chefNom.toLowerCase().includes(q));
-  if (statusFilter) projects = projects.filter(p=>p.statut===statusFilter);
+  if (statusFilter) projects = projects.filter(p=>p.statut===statusFilter||(statusFilter==='Demandé'&&p.statut==='En cours'));
   if (urgencyFilter === 'global') projects = projects.filter(p=>p._urgency==='red'||p._urgency==='orange');
   else if (urgencyFilter) projects = projects.filter(p=>p._urgency===urgencyFilter);
   const urgOrd = {relance:0,red:1,orange:2,yellow:3,recup:4,impossible:5};
